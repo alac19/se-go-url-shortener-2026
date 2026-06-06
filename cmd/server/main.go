@@ -12,6 +12,7 @@ import (
 
 	// 导入自定义模块包
 	handler "github.com/alac19/se-go-url-shortener-2026/internal/handler"
+	repository "github.com/alac19/se-go-url-shortener-2026/internal/repository"
 	service "github.com/alac19/se-go-url-shortener-2026/internal/service"
 )
 
@@ -59,14 +60,14 @@ func main() {
 
 	fmt.Println("进行 MVP 开发学习...")
 
-	// service := service.Do("POST") ×××
-	// service := service.NewService()
-	service := service.NewService(db, rdb)
+	repo := repository.NewRepository(db)
+
+	service := service.NewService(repo)
 
 	// if POST
 	hd1 := handler.HandleCreateShortLink(service)
 
-	fmt.Printf("已处理 handler 层 (返回 %v)、service 层！\n", hd1)
+	fmt.Printf("已处理 handler 层 (返回 %v)、service 层、repository 层！\n", hd1)
 
 	r.POST("/api/links", hd1)
 
@@ -75,7 +76,7 @@ func main() {
 	// if GET
 	hd2 := handler.HandleRedirect(service)
 
-	fmt.Printf("已处理 handler 层 (返回 %v)、service 层！\n", hd2)
+	fmt.Printf("已处理 handler 层 (返回 %v)、service 层、repository 层！\n", hd2)
 
 	r.GET("/:code", hd2)
 
