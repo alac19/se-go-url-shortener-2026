@@ -1,36 +1,37 @@
 package service
 
 import (
-	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
+	model "github.com/alac19/se-go-url-shortener-2026/internal/model"
+	repository "github.com/alac19/se-go-url-shortener-2026/internal/repository"
+	base62 "github.com/alac19/se-go-url-shortener-2026/pkg"
 )
 
 type Service struct {
-	db  *gorm.DB
-	rdb *redis.Client
+	repo *repository.Repository
 }
 
-// func Do(operation string) string {
-// 	switch {
-// 	case operation == "GET":
-// 		println("Service 层处理 GET 业务逻辑")
-// 		return "GET"
-// 	case operation == "POST":
-// 		println("Service 层处理 POST 业务逻辑")
-// 		return "POST"
-// 	}
-
-// 	return ""
-// }
-
-func NewService(db *gorm.DB, rdb *redis.Client) Service {
-	return Service{db: db, rdb: rdb}
+func NewService(repo *repository.Repository) Service {
+	return Service{repo: repo}
 }
 
-func (s Service) CreatShortLink(longURL string) string {
-	// 生成短链接业务逻辑...
+func (s Service) CreateShortLink(longURL string) (string, error) {
+	// 获取 id
+	// 调用 repository 层
+	lm := &model.LinkMap{LongURL: longURL}
 
-	return "abc123"
+	if err := s.repo.Create(lm); err != nil {
+		return "", err
+	}
+
+	// 掉用 base62 包算出 id 编码
+	shortCode := base62.IntToBase62(lm.ID)
+
+	// 更新数据库
+	if err := s.repo.UpdateShortCode(lm.ID, shortCode); err != nil {
+		return "", err
+	}
+
+	return shortCode, nil
 }
 
 func (s Service) Redirect(shortCode string) string {
