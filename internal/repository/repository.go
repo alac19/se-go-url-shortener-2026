@@ -15,7 +15,6 @@ func NewRepository(db *gorm.DB) *Repository {
 }
 
 func (r Repository) Create(lm *model.LinkMap) error {
-	// 新增数据插入数据库...
 	if err := r.db.Create(lm).Error; err != nil {
 		return err
 	}
@@ -24,8 +23,15 @@ func (r Repository) Create(lm *model.LinkMap) error {
 }
 
 func (r Repository) UpdateShortCode(id uint64, shortCode string) error {
-	// 更新短码字段...
 	if err := r.db.Model(&model.LinkMap{}).Where("id = ?", id).Update("short_code", shortCode).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r Repository) FindLink(lm *model.LinkMap, shortCode string) error {
+	if err := r.db.Where("short_code = ?", shortCode).First(lm).Error; err != nil {
 		return err
 	}
 

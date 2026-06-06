@@ -17,8 +17,7 @@ func HandleCreateShortLink(s service.Service) gin.HandlerFunc {
 		}
 
 		if err := c.ShouldBindJSON(&req); err != nil {
-			println("bind error:", err.Error()) // 或 log.Printf
-			c.JSON(400, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求"})
 			return
 		}
 
@@ -26,6 +25,7 @@ func HandleCreateShortLink(s service.Service) gin.HandlerFunc {
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"err": "生成短链失败"})
+			return
 		}
 
 		c.JSON(200, gin.H{"short_url": "http://localhost:8080/" + code})
@@ -37,7 +37,14 @@ func HandleRedirect(s service.Service) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		code := c.Param("code")
-		longURL := s.Redirect(code)
+
+		longURL, err := s.Redirect(code)
+
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "短链不存在"})
+			return
+		}
+
 		c.Redirect(302, longURL)
 	}
 }
