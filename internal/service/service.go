@@ -34,8 +34,12 @@ func (s Service) CreateShortLink(longURL string) (string, error) {
 	return shortCode, nil
 }
 
-func (s Service) Redirect(shortCode string) string {
-	// 重定向业务逻辑...
+func (s Service) Redirect(shortCode string) (string, error) {
+	lm := &model.LinkMap{}
 
-	return "http://example.com"
+	if err := s.repo.FindLink(lm, shortCode); err != nil {
+		return "", err
+	}
+
+	return lm.LongURL, nil
 }
