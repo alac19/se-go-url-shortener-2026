@@ -74,5 +74,11 @@ func (s Service) Redirect(shortCode string) (string, error) {
 		log.Printf("Redis error: %v", err)
 	}
 
+	statsKey := "stats:" + shortCode
+
+	if _, err := s.redis.Incr(ctx, statsKey); err != nil {
+		log.Printf("Redis error: %v", err)
+	}
+
 	return lm.LongURL, nil
 }

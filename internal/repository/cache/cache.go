@@ -29,3 +29,9 @@ func (r Redis) Get(ctx context.Context, key string) (string, error) {
 
 	return val, err
 }
+
+func (r Redis) Incr(ctx context.Context, key string) (int64, error) {
+	count, err := r.Rdb.Incr(ctx, key).Result()
+
+	return count, err
+}
