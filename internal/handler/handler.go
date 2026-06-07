@@ -1,3 +1,4 @@
+// Package handler provides HTTP handlers for shortlink service.
 package handler
 
 import (
@@ -8,6 +9,7 @@ import (
 	service "github.com/alac19/se-go-url-shortener-2026/internal/service"
 )
 
+// HandleCreateShortLink 处理 POST /api/links 请求，解析 JSON 中的 URL，调用 service 生成短链并返回 JSON。
 func HandleCreateShortLink(s service.Service) gin.HandlerFunc {
 	println("handler 层调用 service 层")
 
@@ -32,6 +34,7 @@ func HandleCreateShortLink(s service.Service) gin.HandlerFunc {
 	}
 }
 
+// HandleRedirect 处理 GET /:code 请求，根据路径参数短码查询长链接，并返回 302 重定向。
 func HandleRedirect(s service.Service) gin.HandlerFunc {
 	println("handler 层调用 service 层")
 

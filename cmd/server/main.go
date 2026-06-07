@@ -13,6 +13,7 @@ import (
 	// 导入自定义模块包
 	handler "github.com/alac19/se-go-url-shortener-2026/internal/handler"
 	repository "github.com/alac19/se-go-url-shortener-2026/internal/repository"
+	cache "github.com/alac19/se-go-url-shortener-2026/internal/repository/cache"
 	service "github.com/alac19/se-go-url-shortener-2026/internal/service"
 )
 
@@ -62,7 +63,9 @@ func main() {
 
 	repo := repository.NewRepository(db)
 
-	service := service.NewService(repo)
+	redis := &cache.Redis{Rdb: rdb}
+
+	service := service.NewService(repo, redis)
 
 	// if POST
 	hd1 := handler.HandleCreateShortLink(service)

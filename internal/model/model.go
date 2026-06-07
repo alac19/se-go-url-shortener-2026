@@ -1,3 +1,4 @@
+// Package model defines data structures.
 package model
 
 import "time"
@@ -13,8 +14,4 @@ type LinkMap struct {
 
 func (LinkMap) TableName() string {
 	return "t_link_map"
-}
-
-func NewLinkMap() LinkMap {
-	return LinkMap{}
 }
