@@ -1,3 +1,4 @@
+// Package repository handles database operations.
 package repository
 
 import (
@@ -10,30 +11,19 @@ type Repository struct {
 	db *gorm.DB
 }
 
+// NewRepository 创建一个 Repository 实例，封装数据库连接。
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
 func (r Repository) Create(lm *model.LinkMap) error {
-	if err := r.db.Create(lm).Error; err != nil {
-		return err
-	}
-
-	return nil
+	return r.db.Create(lm).Error
 }
 
 func (r Repository) UpdateShortCode(id uint64, shortCode string) error {
-	if err := r.db.Model(&model.LinkMap{}).Where("id = ?", id).Update("short_code", shortCode).Error; err != nil {
-		return err
-	}
-
-	return nil
+	return r.db.Model(&model.LinkMap{}).Where("id = ?", id).Update("short_code", shortCode).Error
 }
 
 func (r Repository) FindLink(lm *model.LinkMap, shortCode string) error {
-	if err := r.db.Where("short_code = ?", shortCode).First(lm).Error; err != nil {
-		return err
-	}
-
-	return nil
+	return r.db.Where("short_code = ?", shortCode).First(lm).Error
 }
