@@ -15,13 +15,13 @@ import (
 )
 
 type Service struct {
-	repo  *repository.Repository
-	redis *cache.Redis
+	repo  repository.LinkRepository
+	cache cache.Cache
 }
 
 // NewService 创建一个 Service 实例，注入 repository（数据库操作）和 cache（Redis 缓存）依赖。
-func NewService(repo *repository.Repository, redis *cache.Redis) Service {
-	return Service{repo: repo, redis: redis}
+func NewService(repo repository.LinkRepository, cache cache.Cache) Service {
+	return Service{repo: repo, cache: cache}
 }
 
 // CreateShortLink 根据原始长链接生成短码。
@@ -53,7 +53,7 @@ func (s Service) Redirect(shortCode string) (string, error) {
 	cacheKey := "shortlink:" + shortCode
 
 	// 查 Redis
-	val, err := s.redis.Get(ctx, cacheKey)
+	val, err := s.cache.Get(ctx, cacheKey)
 
 	// 缓存命中
 	if err == nil {
@@ -70,13 +70,13 @@ func (s Service) Redirect(shortCode string) (string, error) {
 		return "", err
 	}
 
-	if err := s.redis.Set(ctx, cacheKey, lm.LongURL, time.Hour); err != nil {
+	if err := s.cache.Set(ctx, cacheKey, lm.LongURL, time.Hour); err != nil {
 		log.Printf("Redis error: %v", err)
 	}
 
 	statsKey := "stats:" + shortCode
 
-	if _, err := s.redis.Incr(ctx, statsKey); err != nil {
+	if _, err := s.cache.Incr(ctx, statsKey); err != nil {
 		log.Printf("Redis error: %v", err)
 	}
 
