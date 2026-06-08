@@ -7,6 +7,12 @@ import (
 	model "github.com/alac19/se-go-url-shortener-2026/internal/model"
 )
 
+type LinkRepository interface {
+	Create(lm *model.LinkMap) error
+	UpdateShortCode(id uint64, shortCode string) error
+	FindLink(lm *model.LinkMap, shortCode string) error
+}
+
 type Repository struct {
 	db *gorm.DB
 }
