@@ -3,6 +3,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -11,7 +12,13 @@ import (
 	model "github.com/alac19/se-go-url-shortener-2026/internal/model"
 	repository "github.com/alac19/se-go-url-shortener-2026/internal/repository"
 	cache "github.com/alac19/se-go-url-shortener-2026/internal/repository/cache"
-	base62 "github.com/alac19/se-go-url-shortener-2026/pkg"
+	base62 "github.com/alac19/se-go-url-shortener-2026/pkg/base62"
+	urlcheck "github.com/alac19/se-go-url-shortener-2026/pkg/urlcheck"
+)
+
+var (
+	ErrInValidURL      = errors.New("invalid url format")
+	ErrURLNotReachable = errors.New("url not reachable after retry")
 )
 
 type Service struct {
@@ -28,6 +35,15 @@ func NewService(repo repository.LinkRepository, cache cache.Cache) Service {
 // 先插入数据库获得自增 ID → 转换为 base62 短码 → 更新记录中的短码字段。
 // 返回短码（不含域名），若出错返回错误。
 func (s Service) CreateShortLink(longURL string) (string, error) {
+	if err := urlcheck.IsValidURL(longURL); err != nil {
+		return "", ErrInValidURL
+	}
+
+	if err := urlcheck.IsURLReachableWithRetry(longURL); err != nil {
+		log.Printf("Network error: %v", err)
+		return "", ErrURLNotReachable
+	}
+
 	lm := &model.LinkMap{LongURL: longURL}
 
 	if err := s.repo.Create(lm); err != nil {

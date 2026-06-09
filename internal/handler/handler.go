@@ -2,6 +2,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -24,6 +25,11 @@ func HandleCreateShortLink(s service.Service) gin.HandlerFunc {
 		}
 
 		code, err := s.CreateShortLink(req.URL)
+
+		if errors.Is(err, service.ErrInValidURL) || errors.Is(err, service.ErrURLNotReachable) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"err": "生成短链失败"})
