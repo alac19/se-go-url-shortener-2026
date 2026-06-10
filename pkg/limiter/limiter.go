@@ -7,6 +7,11 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// Limiter 定义了限流器的行为接口。
+type Limiter interface {
+	Allow(ip string) bool
+}
+
 // LimiterMap 管理一组按 IP 地址索引的限流器。
 // 使用读写锁保证并发安全，为每个 IP 创建独立的令牌桶。
 type LimiterMap struct {
