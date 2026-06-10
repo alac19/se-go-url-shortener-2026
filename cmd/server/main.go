@@ -4,17 +4,21 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/time/rate"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
 	// 导入自定义模块包
 	handler "github.com/alac19/se-go-url-shortener-2026/internal/handler"
+	ratelimit "github.com/alac19/se-go-url-shortener-2026/internal/middleware"
 	repository "github.com/alac19/se-go-url-shortener-2026/internal/repository"
 	cache "github.com/alac19/se-go-url-shortener-2026/internal/repository/cache"
 	service "github.com/alac19/se-go-url-shortener-2026/internal/service"
+	limiter "github.com/alac19/se-go-url-shortener-2026/pkg/limiter"
 )
 
 var db *gorm.DB
@@ -57,9 +61,8 @@ func main() {
 	// r.GET("/ping", func(c *gin.Context) {
 	// 	c.JSON(200, gin.H{"message": "pong"})
 	// })
-	fmt.Println("初始化服务框架已通过测试！")
-
-	fmt.Println("进行 MVP 开发学习...")
+	// fmt.Println("初始化服务框架已通过测试！")
+	// fmt.Println("进行 MVP 开发学习...")
 
 	repo := repository.NewRepository(db)
 
@@ -68,11 +71,15 @@ func main() {
 	service := service.NewService(repo, redis)
 
 	// if POST
+	lm := limiter.NewLimiterMap(rate.Every(12*time.Second), 5)
+
+	md1 := ratelimit.HandleRateLimit(lm)
+
 	hd1 := handler.HandleCreateShortLink(service)
 
 	fmt.Printf("已处理 handler 层 (返回 %v)、service 层、repository 层！\n", hd1)
 
-	r.POST("/api/links", hd1)
+	r.POST("/api/links", md1, hd1)
 
 	fmt.Println("路由注册成功！")
 
