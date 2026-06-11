@@ -11,6 +11,7 @@ type LinkRepository interface {
 	Create(lm *model.LinkMap) error
 	UpdateShortCode(id uint64, shortCode string) error
 	FindLink(lm *model.LinkMap, shortCode string) error
+	IncrementClickCount(shortCode string, clickCount int64) error
 }
 
 type Repository struct {
@@ -32,4 +33,8 @@ func (r Repository) UpdateShortCode(id uint64, shortCode string) error {
 
 func (r Repository) FindLink(lm *model.LinkMap, shortCode string) error {
 	return r.db.Where("short_code = ?", shortCode).First(lm).Error
+}
+
+func (r Repository) IncrementClickCount(shortCode string, delta int64) error {
+	return r.db.Model(&model.LinkMap{}).Where("short_code = ?", shortCode).Update("click_count", gorm.Expr("click_count + ?", delta)).Error
 }

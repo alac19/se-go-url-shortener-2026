@@ -70,6 +70,16 @@ func main() {
 
 	service := service.NewService(repo, redis)
 
+	// 异步写入
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			service.FlushStats()
+		}
+	}()
+
 	// if POST
 	lm := limiter.NewLimiterMap(rate.Every(12*time.Second), 5)
 
