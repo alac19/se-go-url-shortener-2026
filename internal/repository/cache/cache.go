@@ -13,6 +13,8 @@ type Cache interface {
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
 	Get(ctx context.Context, key string) (string, error)
 	Incr(ctx context.Context, key string) (int64, error)
+	Scan(ctx context.Context, cursor uint64, match string, count int64) ([]string, uint64, error)
+	Del(ctx context.Context, key string) (int64, error)
 }
 
 type Redis struct {
@@ -35,4 +37,12 @@ func (r Redis) Incr(ctx context.Context, key string) (int64, error) {
 	count, err := r.Rdb.Incr(ctx, key).Result()
 
 	return count, err
+}
+
+func (r Redis) Scan(ctx context.Context, cursor uint64, match string, count int64) ([]string, uint64, error) {
+	return r.Rdb.Scan(ctx, cursor, match, count).Result()
+}
+
+func (r Redis) Del(ctx context.Context, key string) (int64, error) {
+	return r.Rdb.Del(ctx, key).Result()
 }

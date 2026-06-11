@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -65,6 +67,7 @@ func (s Service) CreateShortLink(longURL string) (string, error) {
 // 查询成功后回写缓存（设置 1 小时过期）。若短码不存在或数据库查询失败，返回错误。
 func (s Service) Redirect(shortCode string) (string, error) {
 	lm := &model.LinkMap{}
+	var longURL string
 	ctx := context.Background()
 	cacheKey := "shortlink:" + shortCode
 
@@ -73,7 +76,7 @@ func (s Service) Redirect(shortCode string) (string, error) {
 
 	// 缓存命中
 	if err == nil {
-		return val, nil
+		longURL = val
 	}
 
 	// Redis 出错，降级
@@ -86,6 +89,8 @@ func (s Service) Redirect(shortCode string) (string, error) {
 		return "", err
 	}
 
+	longURL = lm.LongURL
+
 	if err := s.cache.Set(ctx, cacheKey, lm.LongURL, time.Hour); err != nil {
 		log.Printf("Redis error: %v", err)
 	}
@@ -96,5 +101,62 @@ func (s Service) Redirect(shortCode string) (string, error) {
 		log.Printf("Redis error: %v", err)
 	}
 
-	return lm.LongURL, nil
+	return longURL, nil
+}
+
+// FlushStats 将 Redis 中暂存的点击统计计数批量写入 MySQL。
+// 该方法使用 SCAN 命令安全地遍历所有以 "stats:" 为前缀的键，
+// 对每个键获取计数值并累加到对应短链的 click_count 字段中，成功写入后删除该 Redis 键。
+// 若某键处理失败（如 MySQL 更新错误），则保留该键，等待下一次扫描重试。
+func (s Service) FlushStats() {
+	ctx := context.Background()
+	var cursor uint64
+
+	for {
+		var keys []string
+		var err error
+
+		keys, cursor, err = s.cache.Scan(ctx, cursor, "stats:*", 100)
+
+		if err != nil {
+			log.Printf("SCAN error: %v", err)
+			break
+		}
+		for _, key := range keys {
+			code := strings.TrimPrefix(key, "stats:")
+
+			countStr, err := s.cache.Get(ctx, key)
+
+			if err != nil {
+				if err != redis.Nil {
+					log.Printf("Get %s error: %v", key, err)
+				}
+
+				continue
+			}
+
+			count, err := strconv.ParseInt(countStr, 10, 64)
+
+			if err != nil {
+				log.Printf("ParseInt %s error: %v", countStr, err)
+				continue
+			}
+
+			if count <= 0 {
+				continue
+			}
+
+			if err := s.repo.IncrementClickCount(code, count); err != nil {
+				continue
+			}
+
+			if _, err = s.cache.Del(ctx, key); err != nil {
+				log.Printf("Del %s error: %v", key, err)
+				continue
+			}
+		}
+		if cursor == 0 {
+			break
+		}
+	}
 }
