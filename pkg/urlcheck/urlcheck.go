@@ -12,7 +12,11 @@ import (
 var ErrFormat = errors.New("invalid url format")
 var ErrNetWork = errors.New("url not reachable")
 
-var httpClient = &http.Client{Timeout: 3 * time.Second}
+var httpClient = &http.Client{}
+
+var TimeoutSeconds time.Duration
+var MaxRetries int
+var RetryDelaySeconds time.Duration
 
 // IsValidURL 检查 URL 格式是否合法。
 // 要求协议为 http 或 https，且主机名不为空。返回 nil 表示合法，否则返回 ErrFormat。
@@ -40,7 +44,7 @@ func IsValidURL(rawURL string) error {
 // IsURLReachableWithRetry 检查 URL 是否可达，支持自动重试（最多 3 次）和 HEAD 降级到 GET。
 // 成功返回 nil，失败返回 ErrNetWork。
 func IsURLReachableWithRetry(rawURL string) error {
-	maxRetries := 3
+	maxRetries := MaxRetries
 
 loop:
 	for i := 0; i < maxRetries; i++ {
@@ -65,7 +69,7 @@ loop:
 					}
 
 					if j < maxRetries-1 {
-						time.Sleep(1 * time.Second)
+						time.Sleep(RetryDelaySeconds)
 					}
 				}
 
@@ -83,4 +87,11 @@ loop:
 	}
 
 	return ErrNetWork
+}
+
+func Configure(timeoutSec int, maxRetries int, retryDelaySec int) {
+	TimeoutSeconds = time.Duration(timeoutSec) * time.Second
+	httpClient = &http.Client{Timeout: TimeoutSeconds}
+	MaxRetries = maxRetries
+	RetryDelaySeconds = time.Duration(retryDelaySec) * time.Second
 }

@@ -8,6 +8,8 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+var defaultTTL time.Duration
+
 // Cache 定义缓存操作接口，支持设置键值对（带过期时间）和获取值。
 type Cache interface {
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
@@ -22,9 +24,15 @@ type Redis struct {
 }
 
 func (r Redis) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
-	_, err := r.Rdb.Set(ctx, key, value, expiration).Result()
+	if expiration == 0 {
+		_, err := r.Rdb.Set(ctx, key, value, defaultTTL).Result()
 
-	return err
+		return err
+	} else {
+		_, err := r.Rdb.Set(ctx, key, value, expiration).Result()
+
+		return err
+	}
 }
 
 func (r Redis) Get(ctx context.Context, key string) (string, error) {
@@ -45,4 +53,8 @@ func (r Redis) Scan(ctx context.Context, cursor uint64, match string, count int6
 
 func (r Redis) Del(ctx context.Context, key string) (int64, error) {
 	return r.Rdb.Del(ctx, key).Result()
+}
+
+func Configure(ttl int) {
+	defaultTTL = time.Duration(ttl) * time.Second
 }

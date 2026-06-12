@@ -145,16 +145,10 @@ func TestIsURLReachableWithRetry(t *testing.T) {
 				counterMu.Unlock()
 			}
 
+			Configure(3, 3, 1)
+
 			server := httptest.NewServer(test.handler)
 			defer server.Close()
-
-			// 注意：由于 IsURLReachableWithRetry 内部使用了全局 httpClient（超时 3 秒）
-			// 为了精确控制超时，在测试中临时替换 httpClient 变量
-			originalClient := httpClient
-			if test.name == "连接超时（模拟延迟）" {
-				// 保持原样，因为 3s 超时 < 4s 延迟
-			}
-			defer func() { httpClient = originalClient }() // 恢复
 
 			err := IsURLReachableWithRetry(server.URL)
 

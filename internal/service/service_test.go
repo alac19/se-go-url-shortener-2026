@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	model "github.com/alac19/se-go-url-shortener-2026/internal/model"
+	urlcheck "github.com/alac19/se-go-url-shortener-2026/pkg/urlcheck"
 )
 
 type mockRepo struct {
@@ -142,6 +143,9 @@ func (mc *mockCache) Del(ctx context.Context, key string) (int64, error) {
 }
 
 func TestCreateShortLink(t *testing.T) {
+	// 配置 urlcheck 包，让真实网络请求能够正常进行（https://example.com 总是可达，且测试很快）
+	urlcheck.Configure(3, 3, 1)
+
 	tests := []struct {
 		name          string
 		longURL       string
@@ -150,7 +154,7 @@ func TestCreateShortLink(t *testing.T) {
 		wantShortCode string
 		wantErr       bool
 	}{
-		{"正常生成", "https://example.com", nil, nil, "1", false},
+		{"正常生成", "https://example.com", nil, nil, "http://localhost:8080/1", false},
 		{"Create失败", "https://example.com", errors.New("db error"), nil, "", true},
 		{"Update失败", "https://example.com", nil, errors.New("update error"), "", true},
 	}
@@ -163,7 +167,7 @@ func TestCreateShortLink(t *testing.T) {
 			}
 			mc := &mockCache{}
 
-			s := NewService(mp, mc)
+			s := NewService(mp, mc, "http://localhost:8080/", 0)
 
 			got, err := s.CreateShortLink(test.longURL)
 
@@ -217,7 +221,7 @@ func TestRedirect(t *testing.T) {
 				IncrErr:    test.mockIncrErr,
 			}
 
-			s := NewService(mp, mc)
+			s := NewService(mp, mc, "", 0)
 
 			got, err := s.Redirect(test.shortCode)
 
@@ -265,7 +269,7 @@ func TestFlushStats(t *testing.T) {
 				DelErrMap:        test.mockDelErrMap,
 			}
 
-			s := NewService(mp, mc)
+			s := NewService(mp, mc, "", 100)
 
 			s.FlushStats()
 		})

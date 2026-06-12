@@ -36,7 +36,7 @@ func HandleCreateShortLink(s service.Service) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(200, gin.H{"short_url": "http://localhost:8080/" + code})
+		c.JSON(http.StatusOK, gin.H{"short_url": code})
 	}
 }
 
@@ -54,6 +54,6 @@ func HandleRedirect(s service.Service) gin.HandlerFunc {
 			return
 		}
 
-		c.Redirect(302, longURL)
+		c.Redirect(http.StatusFound, longURL)
 	}
 }
