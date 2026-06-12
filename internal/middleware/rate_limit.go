@@ -2,6 +2,8 @@
 package ratelimit
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 
 	limiter "github.com/alac19/se-go-url-shortener-2026/pkg/limiter"
@@ -18,7 +20,7 @@ func HandleRateLimit(lm limiter.Limiter) gin.HandlerFunc {
 		ip := ctx.ClientIP()
 
 		if lm.Allow(ip) {
-			ctx.JSON(429, gin.H{"error": "too many requests"})
+			ctx.JSON(http.StatusTooManyRequests, gin.H{"error": "too many requests"})
 
 			ctx.Abort()
 

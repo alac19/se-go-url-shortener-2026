@@ -7,7 +7,6 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 
@@ -24,13 +23,15 @@ var (
 )
 
 type Service struct {
-	repo  repository.LinkRepository
-	cache cache.Cache
+	repo      repository.LinkRepository
+	cache     cache.Cache
+	domain    string
+	scanCount int64
 }
 
 // NewService 创建一个 Service 实例，注入 repository（数据库操作）和 cache（Redis 缓存）依赖。
-func NewService(repo repository.LinkRepository, cache cache.Cache) Service {
-	return Service{repo: repo, cache: cache}
+func NewService(repo repository.LinkRepository, cache cache.Cache, domain string, scanCount int64) Service {
+	return Service{repo: repo, cache: cache, domain: domain, scanCount: scanCount}
 }
 
 // CreateShortLink 根据原始长链接生成短码。
@@ -59,7 +60,7 @@ func (s Service) CreateShortLink(longURL string) (string, error) {
 		return "", err
 	}
 
-	return shortCode, nil
+	return s.domain + shortCode, nil
 }
 
 // Redirect 根据短码查询原始长链接。
@@ -77,22 +78,22 @@ func (s Service) Redirect(shortCode string) (string, error) {
 	// 缓存命中
 	if err == nil {
 		longURL = val
-	}
+	} else {
+		// Redis 出错，降级
+		if err != redis.Nil {
+			log.Printf("Redis error: %v", err)
+		}
 
-	// Redis 出错，降级
-	if err != redis.Nil {
-		log.Printf("Redis error: %v", err)
-	}
+		// 查数据库
+		if err := s.repo.FindLink(lm, shortCode); err != nil {
+			return "", err
+		}
 
-	// 查数据库
-	if err := s.repo.FindLink(lm, shortCode); err != nil {
-		return "", err
-	}
+		longURL = lm.LongURL
 
-	longURL = lm.LongURL
-
-	if err := s.cache.Set(ctx, cacheKey, lm.LongURL, time.Hour); err != nil {
-		log.Printf("Redis error: %v", err)
+		if err := s.cache.Set(ctx, cacheKey, lm.LongURL, 0); err != nil {
+			log.Printf("Redis error: %v", err)
+		}
 	}
 
 	statsKey := "stats:" + shortCode
@@ -116,7 +117,7 @@ func (s Service) FlushStats() {
 		var keys []string
 		var err error
 
-		keys, cursor, err = s.cache.Scan(ctx, cursor, "stats:*", 100)
+		keys, cursor, err = s.cache.Scan(ctx, cursor, "stats:*", s.scanCount)
 
 		if err != nil {
 			log.Printf("SCAN error: %v", err)

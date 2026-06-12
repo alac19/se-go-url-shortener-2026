@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,12 +15,14 @@ import (
 	"gorm.io/gorm"
 
 	// 导入自定义模块包
+	config "github.com/alac19/se-go-url-shortener-2026/internal/config"
 	handler "github.com/alac19/se-go-url-shortener-2026/internal/handler"
 	ratelimit "github.com/alac19/se-go-url-shortener-2026/internal/middleware"
 	repository "github.com/alac19/se-go-url-shortener-2026/internal/repository"
 	cache "github.com/alac19/se-go-url-shortener-2026/internal/repository/cache"
 	service "github.com/alac19/se-go-url-shortener-2026/internal/service"
 	limiter "github.com/alac19/se-go-url-shortener-2026/pkg/limiter"
+	urlcheck "github.com/alac19/se-go-url-shortener-2026/pkg/urlcheck"
 )
 
 var db *gorm.DB
@@ -26,9 +30,16 @@ var db *gorm.DB
 func main() {
 	fmt.Println("项目开发阶段启动！")
 
+	// 加载配置
+	cfg, err := config.LoadConfig("configs/config.toml")
+
+	if err != nil {
+		slog.Error("加载配置失败", "error", err)
+		os.Exit(1)
+	}
+
 	// 连接 MySQL
-	dsn := "root:Alac197@@tcp(127.0.0.1:3306)/shortlink_db?charset=utf8mb4&parseTime=True&loc=Local"
-	var err error
+	dsn := cfg.MySQL.DSN
 
 	db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
@@ -40,9 +51,9 @@ func main() {
 
 	// 连接 Redis
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379", // 启动的 Redis 容器
-		Password: "",               // 没设密码就留空
-		DB:       0,                // 使用默认数据库
+		Addr:     cfg.Redis.Addr,     // 启动的 Redis 容器
+		Password: cfg.Redis.Password, // 没设密码就留空
+		DB:       cfg.Redis.DB,       // 使用默认数据库
 	})
 
 	// 测试连接
@@ -66,13 +77,15 @@ func main() {
 
 	repo := repository.NewRepository(db)
 
+	cache.Configure(cfg.Cache.TTLSeconds)
 	redis := &cache.Redis{Rdb: rdb}
+	urlcheck.Configure(cfg.URLCheck.TimeoutSeconds, cfg.URLCheck.MaxRetries, cfg.URLCheck.RetryDelaySeconds)
 
-	service := service.NewService(repo, redis)
+	service := service.NewService(repo, redis, cfg.Server.Domain, int64(cfg.AsyncFlush.ScanCount))
 
 	// 异步写入
 	go func() {
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(time.Duration(cfg.AsyncFlush.IntervalSeconds) * time.Second)
 		defer ticker.Stop()
 
 		for range ticker.C {
@@ -81,7 +94,7 @@ func main() {
 	}()
 
 	// if POST
-	lm := limiter.NewLimiterMap(rate.Every(12*time.Second), 5)
+	lm := limiter.NewLimiterMap(rate.Every(time.Duration(cfg.Ratelimit.EverySeconds)*time.Second), cfg.Ratelimit.Burst)
 
 	md1 := ratelimit.HandleRateLimit(lm)
 
@@ -103,5 +116,7 @@ func main() {
 	fmt.Println("路由注册成功！")
 
 	// 启动服务（端口 8080）
-	r.Run(":8080")
+	if err := r.Run(fmt.Sprintf(":%d", cfg.Server.Port)); err != nil {
+		log.Fatalf("启动服务器失败: %v", err)
+	}
 }
