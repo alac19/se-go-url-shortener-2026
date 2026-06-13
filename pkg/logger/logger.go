@@ -1,3 +1,4 @@
+// Package logger provides structured log initialization based on slog.
 package logger
 
 import (
@@ -8,6 +9,7 @@ import (
 	"strings"
 )
 
+// Init 初始化全局 slog 日志器。
 func Init(level string, filePath string) error {
 	// 解析日志级别
 	var logLevel slog.Level

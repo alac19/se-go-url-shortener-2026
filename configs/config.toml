@@ -20,7 +20,7 @@ burst = 5
 
 # 异步写入配置
 [asyncflush]
-interval_seconds = 60
+interval_seconds = 30
 scan_count = 100
 
 # URL 可达性检查配置
@@ -35,5 +35,5 @@ ttl_seconds = 3600   # 1小时
 
 # 日志配置
 [log]
-level = "error"     
-file_path = "logs/shortlink2.log" 
+level = "info"     
+file_path = "logs/shortlink.log" 

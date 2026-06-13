@@ -9,13 +9,22 @@ import (
 	"time"
 )
 
+// ErrFormat 表示 URL 格式错误（协议或主机不合法）。
 var ErrFormat = errors.New("invalid url format")
+
+// ErrNetWork 表示经过重试后 URL 仍不可访问。
 var ErrNetWork = errors.New("url not reachable")
 
+// httpClient 用于发起 HTTP 请求，超时时间由 Configure 设置。
 var httpClient = &http.Client{}
 
+// TimeoutSeconds 单次请求的超时时间（秒）。
 var TimeoutSeconds time.Duration
+
+// MaxRetries 最大重试次数。
 var MaxRetries int
+
+// RetryDelaySeconds 每次重试之间的等待时间（秒）。
 var RetryDelaySeconds time.Duration
 
 // IsValidURL 检查 URL 格式是否合法。
@@ -89,6 +98,7 @@ loop:
 	return ErrNetWork
 }
 
+// Configure 设置 URL 可达性检查的全局参数。
 func Configure(timeoutSec int, maxRetries int, retryDelaySec int) {
 	TimeoutSeconds = time.Duration(timeoutSec) * time.Second
 	httpClient = &http.Client{Timeout: TimeoutSeconds}

@@ -18,10 +18,16 @@ import (
 )
 
 var (
-	ErrInValidURL      = errors.New("invalid url format")
+	// ErrInValidURL 表示长链接格式无效。
+	ErrInValidURL = errors.New("invalid url format")
+
+	// ErrURLNotReachable 表示长链接经过重试后仍不可访问。
 	ErrURLNotReachable = errors.New("url not reachable after retry")
 )
 
+// Service 是短链接服务的核心业务逻辑层，负责短链生成、重定向、统计计数及异步写入。
+// 它依赖 repository（数据库操作）和 cache（Redis 缓存），并通过 domain 拼接完整短链接，
+// scanCount 用于控制 SCAN 命令每次返回的 key 数量。
 type Service struct {
 	repo      repository.LinkRepository
 	cache     cache.Cache

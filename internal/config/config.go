@@ -1,3 +1,4 @@
+// Package config provides configuration management for short link services.
 package config
 
 import (
@@ -6,7 +7,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// Config 总配置
+// Config 总配置。
 type Config struct {
 	MySQL      MySql      `toml:"mysql"`
 	Redis      Redis      `toml:"redis"`
@@ -18,46 +19,55 @@ type Config struct {
 	Log        Log        `toml:"log"`
 }
 
+// MySql 定义 MySQL 数据库连接配置。
 type MySql struct {
-	DSN string `toml:"dsn"`
+	DSN string `toml:"dsn"` // 数据源名称（Data Source Name）
 }
 
+// Redis 定义 Redis 缓存配置。
 type Redis struct {
-	Addr     string `toml:"addr"`
-	Password string `toml:"password"`
-	DB       int    `toml:"db"`
+	Addr     string `toml:"addr"`     // 服务器地址
+	Password string `toml:"password"` // 密码
+	DB       int    `toml:"db"`       // 数据库编号
 }
 
+// Server 定义 HTTP 服务器配置。
 type Server struct {
-	Port   int    `toml:"port"`
-	Domain string `toml:"domain"`
+	Port   int    `toml:"port"`   // 监听端口
+	Domain string `toml:"domain"` // 短链接域名（包含协议和端口，例如 http://localhost:8080/）
 }
 
+// Ratelimit 定义限流器配置。
 type Ratelimit struct {
-	EverySeconds int `toml:"every_seconds"`
-	Burst        int `toml:"burst"`
+	EverySeconds int `toml:"every_seconds"` // 生成令牌的时间间隔（秒）
+	Burst        int `toml:"burst"`         // 令牌桶容量（突发请求数）
 }
 
+// AsyncFlush 定义异步统计写入配置。
 type AsyncFlush struct {
-	IntervalSeconds int `toml:"interval_seconds"`
-	ScanCount       int `toml:"scan_count"`
+	IntervalSeconds int `toml:"interval_seconds"` // 刷新间隔（秒）
+	ScanCount       int `toml:"scan_count"`       // SCAN 命令每次返回的键数量提示
 }
 
+// URLCheck 定义 URL 可达性检查配置。
 type URLCheck struct {
-	TimeoutSeconds    int `toml:"timeout_seconds"`
-	MaxRetries        int `toml:"max_retries"`
-	RetryDelaySeconds int `toml:"retry_delay_seconds"`
+	TimeoutSeconds    int `toml:"timeout_seconds"`     // HTTP 请求超时（秒）
+	MaxRetries        int `toml:"max_retries"`         // 最大重试次数
+	RetryDelaySeconds int `toml:"retry_delay_seconds"` // 重试间隔（秒）
 }
 
+// Cache 定义缓存配置。
 type Cache struct {
-	TTLSeconds int `toml:"ttl_seconds"`
+	TTLSeconds int `toml:"ttl_seconds"` // 缓存过期时间（秒）
 }
 
+// Log 定义日志配置。
 type Log struct {
-	Level    string `toml:"level"`
-	FilePath string `toml:"file_path"`
+	Level    string `toml:"level"`     // 日志级别（debug, info, warn, error）
+	FilePath string `toml:"file_path"` // 日志文件路径，为空则只输出到控制台
 }
 
+// LoadConfig 从指定路径加载 TOML 配置文件，并校验配置合法性。
 func LoadConfig(path string) (*Config, error) {
 	var config Config
 
