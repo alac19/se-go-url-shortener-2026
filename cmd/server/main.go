@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"time"
@@ -22,13 +21,14 @@ import (
 	cache "github.com/alac19/se-go-url-shortener-2026/internal/repository/cache"
 	service "github.com/alac19/se-go-url-shortener-2026/internal/service"
 	limiter "github.com/alac19/se-go-url-shortener-2026/pkg/limiter"
+	logger "github.com/alac19/se-go-url-shortener-2026/pkg/logger"
 	urlcheck "github.com/alac19/se-go-url-shortener-2026/pkg/urlcheck"
 )
 
 var db *gorm.DB
 
 func main() {
-	fmt.Println("项目开发阶段启动！")
+	fmt.Println("项目开发阶段启动")
 
 	// 加载配置
 	cfg, err := config.LoadConfig("configs/config.toml")
@@ -38,16 +38,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := logger.Init(cfg.Log.Level, cfg.Log.FilePath); err != nil {
+		slog.Error("初始化日志失败", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("日志系统初始化成功", "level", cfg.Log.Level, "file", cfg.Log.FilePath)
+
 	// 连接 MySQL
 	dsn := cfg.MySQL.DSN
 
 	db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
 	if err != nil {
-		log.Fatalf("连接数据库失败: %v", err)
+		slog.Error("连接数据库失败", "error", err)
+		os.Exit(1)
 	}
 
-	fmt.Println("MySQL 连接成功")
+	slog.Info("MySQL 连接成功")
 
 	// 连接 Redis
 	rdb := redis.NewClient(&redis.Options{
@@ -60,10 +67,11 @@ func main() {
 	ctx := context.Background()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		log.Fatalf("连接 Redis 失败: %v", err)
+		slog.Error("连接 Redis 失败", "error", err)
+		os.Exit(1)
 	}
 
-	fmt.Println("Redis 连接成功")
+	slog.Info("Redis 连接成功")
 
 	// 初始化 Gin
 	r := gin.Default()
@@ -117,6 +125,7 @@ func main() {
 
 	// 启动服务（端口 8080）
 	if err := r.Run(fmt.Sprintf(":%d", cfg.Server.Port)); err != nil {
-		log.Fatalf("启动服务器失败: %v", err)
+		slog.Error("启动服务器失败", "error", err)
+		os.Exit(1)
 	}
 }

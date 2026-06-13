@@ -4,7 +4,7 @@ package service
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"strconv"
 	"strings"
 
@@ -43,7 +43,7 @@ func (s Service) CreateShortLink(longURL string) (string, error) {
 	}
 
 	if err := urlcheck.IsURLReachableWithRetry(longURL); err != nil {
-		log.Printf("Network error: %v", err)
+		slog.Error("Network error", "error", err)
 		return "", ErrURLNotReachable
 	}
 
@@ -81,7 +81,7 @@ func (s Service) Redirect(shortCode string) (string, error) {
 	} else {
 		// Redis 出错，降级
 		if err != redis.Nil {
-			log.Printf("Redis error: %v", err)
+			slog.Error("Redis error", "error", err)
 		}
 
 		// 查数据库
@@ -92,14 +92,14 @@ func (s Service) Redirect(shortCode string) (string, error) {
 		longURL = lm.LongURL
 
 		if err := s.cache.Set(ctx, cacheKey, lm.LongURL, 0); err != nil {
-			log.Printf("Redis error: %v", err)
+			slog.Error("Redis error", "error", err)
 		}
 	}
 
 	statsKey := "stats:" + shortCode
 
 	if _, err := s.cache.Incr(ctx, statsKey); err != nil {
-		log.Printf("Redis error: %v", err)
+		slog.Error("Redis error", "error", err)
 	}
 
 	return longURL, nil
@@ -120,7 +120,7 @@ func (s Service) FlushStats() {
 		keys, cursor, err = s.cache.Scan(ctx, cursor, "stats:*", s.scanCount)
 
 		if err != nil {
-			log.Printf("SCAN error: %v", err)
+			slog.Error("SCAN error", "error", err)
 			break
 		}
 		for _, key := range keys {
@@ -130,7 +130,7 @@ func (s Service) FlushStats() {
 
 			if err != nil {
 				if err != redis.Nil {
-					log.Printf("Get %s error: %v", key, err)
+					slog.Error("Get error", "key", key, "error", err)
 				}
 
 				continue
@@ -139,7 +139,7 @@ func (s Service) FlushStats() {
 			count, err := strconv.ParseInt(countStr, 10, 64)
 
 			if err != nil {
-				log.Printf("ParseInt %s error: %v", countStr, err)
+				slog.Error("ParseInt error", "value", countStr, "error", err)
 				continue
 			}
 
@@ -152,7 +152,7 @@ func (s Service) FlushStats() {
 			}
 
 			if _, err = s.cache.Del(ctx, key); err != nil {
-				log.Printf("Del %s error: %v", key, err)
+				slog.Error("Del error", "key", key, "error", err)
 				continue
 			}
 		}
