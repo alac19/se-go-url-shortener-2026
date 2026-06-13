@@ -32,3 +32,8 @@ retry_delay_seconds = 1
 # 缓存配置
 [cache]
 ttl_seconds = 3600   # 1小时
+
+# 日志配置
+[log]
+level = "error"     
+file_path = "logs/shortlink2.log" 

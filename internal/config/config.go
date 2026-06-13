@@ -15,6 +15,7 @@ type Config struct {
 	AsyncFlush AsyncFlush `toml:"asyncflush"`
 	URLCheck   URLCheck   `toml:"urlcheck"`
 	Cache      Cache      `toml:"cache"`
+	Log        Log        `toml:"log"`
 }
 
 type MySql struct {
@@ -50,6 +51,11 @@ type URLCheck struct {
 
 type Cache struct {
 	TTLSeconds int `toml:"ttl_seconds"`
+}
+
+type Log struct {
+	Level    string `toml:"level"`
+	FilePath string `toml:"file_path"`
 }
 
 func LoadConfig(path string) (*Config, error) {
