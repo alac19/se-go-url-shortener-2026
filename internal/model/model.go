@@ -3,6 +3,7 @@ package model
 
 import "time"
 
+// LinkMap 对应数据库中的 t_link_map 表，存储短链接映射信息。
 type LinkMap struct {
 	ID         uint64    `gorm:"primaryKey;autoIncrement"`
 	LongURL    string    `gorm:"column:long_url;type:text;not null"`
