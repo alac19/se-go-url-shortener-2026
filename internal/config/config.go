@@ -86,7 +86,7 @@ func LoadConfig(path string) (*Config, error) {
 func (c *Config) Validate() error {
 	// 服务器配置
 	if c.Server.Port <= 0 || c.Server.Port > 65535 {
-		return fmt.Errorf("server.port 必须在 1-65535 之间，当前值: %d", c.Server.Port)
+		return fmt.Errorf("server.port 必须在 1-65535 之间, 当前值: %d", c.Server.Port)
 	}
 	if c.Server.Domain == "" {
 		return fmt.Errorf("server.domain 不能为空")
@@ -94,34 +94,34 @@ func (c *Config) Validate() error {
 
 	// 限流配置
 	if c.Ratelimit.EverySeconds <= 0 {
-		return fmt.Errorf("ratelimit.every_seconds 必须 > 0，当前值: %f", c.Ratelimit.EverySeconds)
+		return fmt.Errorf("ratelimit.every_seconds 必须 > 0, 当前值: %d", c.Ratelimit.EverySeconds)
 	}
 	if c.Ratelimit.Burst <= 0 {
-		return fmt.Errorf("ratelimit.burst 必须 > 0，当前值: %d", c.Ratelimit.Burst)
+		return fmt.Errorf("ratelimit.burst 必须 > 0, 当前值: %d", c.Ratelimit.Burst)
 	}
 
 	// 异步写入配置
 	if c.AsyncFlush.IntervalSeconds <= 0 {
-		return fmt.Errorf("asyncflush.interval_seconds 必须 > 0，当前值: %d", c.AsyncFlush.IntervalSeconds)
+		return fmt.Errorf("asyncflush.interval_seconds 必须 > 0, 当前值: %d", c.AsyncFlush.IntervalSeconds)
 	}
 	if c.AsyncFlush.ScanCount <= 0 {
-		return fmt.Errorf("asyncflush.scan_count 必须 > 0，当前值: %d", c.AsyncFlush.ScanCount)
+		return fmt.Errorf("asyncflush.scan_count 必须 > 0, 当前值: %d", c.AsyncFlush.ScanCount)
 	}
 
 	// URL 可达性检查配置
 	if c.URLCheck.TimeoutSeconds <= 0 {
-		return fmt.Errorf("urlcheck.timeout_seconds 必须 > 0，当前值: %d", c.URLCheck.TimeoutSeconds)
+		return fmt.Errorf("urlcheck.timeout_seconds 必须 > 0, 当前值: %d", c.URLCheck.TimeoutSeconds)
 	}
 	if c.URLCheck.MaxRetries < 0 {
 		return fmt.Errorf("urlcheck.max_retries 不能为负数，当前值: %d", c.URLCheck.MaxRetries)
 	}
 	if c.URLCheck.MaxRetries > 0 && c.URLCheck.RetryDelaySeconds <= 0 {
-		return fmt.Errorf("urlcheck.retry_delay_seconds 在 max_retries > 0 时必须 > 0，当前值: %d", c.URLCheck.RetryDelaySeconds)
+		return fmt.Errorf("urlcheck.retry_delay_seconds 在 max_retries > 0 时必须 > 0, 当前值: %d", c.URLCheck.RetryDelaySeconds)
 	}
 
 	// 缓存配置
 	if c.Cache.TTLSeconds <= 0 {
-		return fmt.Errorf("cache.ttl_seconds 必须 > 0，当前值: %d", c.Cache.TTLSeconds)
+		return fmt.Errorf("cache.ttl_seconds 必须 > 0, 当前值: %d", c.Cache.TTLSeconds)
 	}
 
 	// MySQL 配置

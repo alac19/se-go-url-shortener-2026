@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 
@@ -38,6 +40,7 @@ func main() {
 		slog.Error("初始化日志失败", "error", err)
 		os.Exit(1)
 	}
+
 	slog.Info("日志系统初始化成功", "level", cfg.Log.Level, "file", cfg.Log.FilePath)
 
 	// 连接 MySQL
@@ -51,6 +54,16 @@ func main() {
 	}
 
 	slog.Info("MySQL 连接成功")
+
+	sqlDB, err := db.DB()
+
+	if err != nil {
+		slog.Error("获取底层 sql.DB 失败", "error", err)
+		os.Exit(1)
+	}
+
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetMaxIdleConns(10)
 
 	// 连接 Redis
 	rdb := redis.NewClient(&redis.Options{
@@ -69,8 +82,15 @@ func main() {
 
 	slog.Info("Redis 连接成功")
 
+	go func() {
+		http.ListenAndServe("0.0.0.0:6060", nil)
+	}()
+
 	// 初始化 Gin
-	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+
+	r := gin.New()
+	r.Use(gin.Recovery())
 
 	repo := repository.NewRepository(db)
 
@@ -90,7 +110,6 @@ func main() {
 		}
 	}()
 
-	// if POST
 	lm := limiter.NewLimiterMap(rate.Every(time.Duration(cfg.Ratelimit.EverySeconds)*time.Second), cfg.Ratelimit.Burst)
 
 	md1 := ratelimit.HandleRateLimit(lm)
@@ -99,7 +118,6 @@ func main() {
 
 	r.POST("/api/links", md1, hd1)
 
-	// if GET
 	hd2 := handler.HandleRedirect(service)
 
 	r.GET("/:code", hd2)
