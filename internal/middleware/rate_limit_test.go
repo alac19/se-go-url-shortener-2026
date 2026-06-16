@@ -47,13 +47,13 @@ func TestHandleRateLimit(t *testing.T) {
 			r.ServeHTTP(rec, req)
 
 			if rec.Code != test.expectedStatus {
-				t.Errorf("状态码错误：got %d, want %d", rec.Code, test.expectedStatus)
+				t.Errorf("状态码错: got %d, want %d", rec.Code, test.expectedStatus)
 			}
 
 			body := rec.Body.String()
 
 			if body != test.expectedBody {
-				t.Errorf("响应体错误：got %s, want %s", body, test.expectedBody)
+				t.Errorf("响应体错误: got %s, want %s", body, test.expectedBody)
 			}
 		})
 	}

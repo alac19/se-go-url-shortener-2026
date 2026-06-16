@@ -56,7 +56,7 @@ func TestIsURLReachableWithRetry(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "HEAD 返回 404（不存在）",
+			name: "HEAD 返回 404 (不存在)",
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Method == http.MethodHead {
 					w.WriteHeader(http.StatusNotFound)
@@ -67,7 +67,7 @@ func TestIsURLReachableWithRetry(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "HEAD 返回 500（服务器错误）",
+			name: "HEAD 返回 500 (服务器错误)",
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Method == http.MethodHead {
 					w.WriteHeader(http.StatusInternalServerError)
@@ -78,7 +78,7 @@ func TestIsURLReachableWithRetry(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "HEAD 返回 500（服务器错误），重试后成功",
+			name: "HEAD 返回 500 (服务器错误), 重试后成功",
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Method == http.MethodHead {
 					// 第一次请求返回 500，第二次及以后返回 200
@@ -99,7 +99,7 @@ func TestIsURLReachableWithRetry(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "HEAD 返回 405，降级 GET 成功",
+			name: "HEAD 返回 405, 降级 GET 成功",
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				switch r.Method {
 				case http.MethodHead:
@@ -139,7 +139,7 @@ func TestIsURLReachableWithRetry(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// 重置计数器（如果使用）
-			if test.name == "HEAD 返回 500（服务器错误），重试后成功" {
+			if test.name == "HEAD 返回 500 (服务器错误), 重试后成功" {
 				counterMu.Lock()
 				counter = 0
 				counterMu.Unlock()
