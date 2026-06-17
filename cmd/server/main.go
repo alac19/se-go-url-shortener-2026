@@ -19,6 +19,7 @@ import (
 	config "github.com/alac19/se-go-url-shortener-2026/internal/config"
 	handler "github.com/alac19/se-go-url-shortener-2026/internal/handler"
 	ratelimit "github.com/alac19/se-go-url-shortener-2026/internal/middleware"
+	model "github.com/alac19/se-go-url-shortener-2026/internal/model"
 	repository "github.com/alac19/se-go-url-shortener-2026/internal/repository"
 	cache "github.com/alac19/se-go-url-shortener-2026/internal/repository/cache"
 	service "github.com/alac19/se-go-url-shortener-2026/internal/service"
@@ -54,6 +55,13 @@ func main() {
 	}
 
 	slog.Info("MySQL 连接成功")
+
+	if err := db.AutoMigrate(&model.LinkMap{}); err != nil {
+		slog.Error("自动迁移表结构失败", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("表结构同步完成")
 
 	sqlDB, err := db.DB()
 
