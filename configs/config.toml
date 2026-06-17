@@ -1,0 +1,39 @@
+# MySQL 配置
+[mysql]
+dsn = "root:123456@tcp(mysql:3306)/shortlink_db?charset=utf8mb4&parseTime=True&loc=Local"
+
+# Redis 配置
+[redis]
+addr = "redis:6379"
+password = ""
+db = 0
+
+# 服务器配置
+[server]
+port = 8080
+domain = "http://localhost:8080/"
+
+# 限流配置
+[ratelimit]
+every_seconds = 12
+burst = 5
+
+# 异步写入配置
+[asyncflush]
+interval_seconds = 30
+scan_count = 100
+
+# URL 可达性检查配置
+[urlcheck]
+timeout_seconds = 3
+max_retries = 3
+retry_delay_seconds = 1
+
+# 缓存配置
+[cache]
+ttl_seconds = 3600   # 1小时
+
+# 日志配置
+[log]
+level = "info"     
+file_path = "logs/shortlink.log" 

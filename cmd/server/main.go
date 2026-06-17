@@ -1,0 +1,138 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+	"golang.org/x/time/rate"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+
+	// 导入自定义模块包
+	config "github.com/alac19/se-go-url-shortener-2026/internal/config"
+	handler "github.com/alac19/se-go-url-shortener-2026/internal/handler"
+	ratelimit "github.com/alac19/se-go-url-shortener-2026/internal/middleware"
+	model "github.com/alac19/se-go-url-shortener-2026/internal/model"
+	repository "github.com/alac19/se-go-url-shortener-2026/internal/repository"
+	cache "github.com/alac19/se-go-url-shortener-2026/internal/repository/cache"
+	service "github.com/alac19/se-go-url-shortener-2026/internal/service"
+	limiter "github.com/alac19/se-go-url-shortener-2026/pkg/limiter"
+	logger "github.com/alac19/se-go-url-shortener-2026/pkg/logger"
+	urlcheck "github.com/alac19/se-go-url-shortener-2026/pkg/urlcheck"
+)
+
+func main() {
+	// 加载配置
+	cfg, err := config.LoadConfig("configs/config.toml")
+
+	if err != nil {
+		slog.Error("加载配置失败", "error", err)
+		os.Exit(1)
+	}
+
+	if err := logger.Init(cfg.Log.Level, cfg.Log.FilePath); err != nil {
+		slog.Error("初始化日志失败", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("日志系统初始化成功", "level", cfg.Log.Level, "file", cfg.Log.FilePath)
+
+	// 连接 MySQL
+	dsn := cfg.MySQL.DSN
+
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+
+	if err != nil {
+		slog.Error("连接数据库失败", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("MySQL 连接成功")
+
+	if err := db.AutoMigrate(&model.LinkMap{}); err != nil {
+		slog.Error("自动迁移表结构失败", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("表结构同步完成")
+
+	sqlDB, err := db.DB()
+
+	if err != nil {
+		slog.Error("获取底层 sql.DB 失败", "error", err)
+		os.Exit(1)
+	}
+
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetMaxIdleConns(10)
+
+	// 连接 Redis
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,     // 启动的 Redis 容器
+		Password: cfg.Redis.Password, // 没设密码就留空
+		DB:       cfg.Redis.DB,       // 使用默认数据库
+	})
+
+	// 测试连接
+	ctx := context.Background()
+
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		slog.Error("连接 Redis 失败", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("Redis 连接成功")
+
+	go func() {
+		http.ListenAndServe("0.0.0.0:6060", nil)
+	}()
+
+	// 初始化 Gin
+	gin.SetMode(gin.ReleaseMode)
+
+	r := gin.New()
+	r.Use(gin.Recovery())
+
+	repo := repository.NewRepository(db)
+
+	cache.Configure(cfg.Cache.TTLSeconds)
+	redis := &cache.Redis{Rdb: rdb}
+	urlcheck.Configure(cfg.URLCheck.TimeoutSeconds, cfg.URLCheck.MaxRetries, cfg.URLCheck.RetryDelaySeconds)
+
+	service := service.NewService(repo, redis, cfg.Server.Domain, int64(cfg.AsyncFlush.ScanCount))
+
+	// 异步写入
+	go func() {
+		ticker := time.NewTicker(time.Duration(cfg.AsyncFlush.IntervalSeconds) * time.Second)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			service.FlushStats()
+		}
+	}()
+
+	lm := limiter.NewLimiterMap(rate.Every(time.Duration(cfg.Ratelimit.EverySeconds)*time.Second), cfg.Ratelimit.Burst)
+
+	md1 := ratelimit.HandleRateLimit(lm)
+
+	hd1 := handler.HandleCreateShortLink(service)
+
+	r.POST("/api/links", md1, hd1)
+
+	hd2 := handler.HandleRedirect(service)
+
+	r.GET("/:code", hd2)
+
+	// 启动服务（端口 8080）
+	if err := r.Run(fmt.Sprintf(":%d", cfg.Server.Port)); err != nil {
+		slog.Error("启动服务器失败", "error", err)
+		os.Exit(1)
+	}
+}
