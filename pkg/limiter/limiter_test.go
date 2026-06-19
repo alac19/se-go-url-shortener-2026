@@ -1,6 +1,7 @@
 package limiter
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -70,20 +71,20 @@ func TestAllow(t *testing.T) {
 		}
 	})
 
-	// t.Run("并发安全", func(t *testing.T) {
-	// 	lm := NewLimiterMap(rate.Every(12*time.Second), 5)
+	t.Run("并发安全", func(t *testing.T) {
+		lm := NewLimiterMap(rate.Every(12*time.Second), 5)
 
-	// 	var wg sync.WaitGroup
+		var wg sync.WaitGroup
 
-	// 	for i := 0; i < 100; i++ {
-	// 		wg.Add(1)
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
 
-	// 		go func() {
-	// 			defer wg.Done()
-	// 			lm.Allow("1.2.3.4")
-	// 		}()
-	// 	}
+			go func() {
+				defer wg.Done()
+				lm.Allow("1.2.3.4")
+			}()
+		}
 
-	// 	wg.Wait()
-	// })
+		wg.Wait()
+	})
 }
